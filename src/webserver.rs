@@ -4,10 +4,11 @@ use serde::Serialize;
 use crate::aggregator::Aggregator;
 use arc_swap::ArcSwap;
 use std::sync::{RwLock, Arc};
+use rocket::response::NamedFile;
 
 #[get("/")]
-fn index() -> &'static str {
-    "abc"
+fn index() -> Option<NamedFile> {
+    NamedFile::open("index.html").ok()
 }
 
 
