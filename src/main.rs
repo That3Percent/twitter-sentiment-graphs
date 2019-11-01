@@ -7,7 +7,7 @@ use std::sync::Arc;
 use arc_swap::ArcSwap;
 use std::sync::RwLock;
 
-const UpdateIntervalSeconds: u64 = 12;
+const UpdateIntervalSeconds: u64 = 120;
 
 mod config;
 use crate::config::{Config, read_config};
