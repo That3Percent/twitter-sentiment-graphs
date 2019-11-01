@@ -6,10 +6,10 @@ use crate::sentiment_pipeline::Sentiment;
 
 const SAMPLES: usize = 100;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Aggregator {
-	items: HashMap<&'static str, AggregatorItem>,
-	sample_times: CircularQueue<DateTime<Utc>>,
+	pub items: HashMap<&'static str, AggregatorItem>,
+	pub sample_times: CircularQueue<DateTime<Utc>>,
 }
 
 impl Aggregator {
@@ -46,11 +46,11 @@ impl Aggregator {
 	}
 }
 
-#[derive(Debug)]
-struct AggregatorItem {
+#[derive(Debug, Clone)]
+pub struct AggregatorItem {
 	current_count: usize,
 	current_total_sentiment: f32,
-	samples: CircularQueue<f32>,
+	pub samples: CircularQueue<f32>,
 }
 
 impl AggregatorItem {

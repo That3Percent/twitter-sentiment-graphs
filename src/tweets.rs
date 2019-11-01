@@ -43,7 +43,7 @@ pub fn produce_tweets(auth: TwitterAuth, keywords: Keywords) -> impl Stream<Item
 			.for_each(move |json| {
 				send.unbounded_send(json.to_string()).unwrap(); // TODO: Error handling
 				Ok(())
-			}).map_err(|e| {dbg!(e); ()}); // TODO: Handle reconnection
+			}).map_err(|e| {dbg!(e);}); // TODO: Handle reconnection
 
 		rt::run(fut);
 	});
