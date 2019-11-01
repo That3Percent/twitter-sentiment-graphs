@@ -18,15 +18,7 @@ pub struct TwitterAuth {
 	pub access_secret: String,
 }
 
-
-pub async fn deserialize_tweets(mut tweets: impl Stream<Item=String> + Unpin, mut out: Sender<Tweet>) {
-	while let Some(tweet) = tweets.next().await {
-		let tweet: serde_json::Result<Tweet> = serde_json::from_str(&tweet);
-		out.unbounded_send(tweet.unwrap()); // TODO: Error handling
-	}
-}
-
-pub fn produce_tweets(auth: TwitterAuth, keywords: Vec<&'static str>) -> impl Stream<Item=String> {
+pub fn produce_tweets(auth: TwitterAuth, keywords: Keywords) -> impl Stream<Item=String> {
 	let (send, recv) = unbounded();
 
 	std::thread::spawn(move || {

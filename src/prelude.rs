@@ -8,3 +8,4 @@ pub(crate) use futures::{
 	channel::mpsc::unbounded,
 };
 pub(crate) use async_std::task;
+pub(crate) type Keywords = &'static [&'static str];

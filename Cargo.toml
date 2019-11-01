@@ -9,7 +9,10 @@ edition = "2018"
 serde = { version = "1.0.102", features = ["derive"] }
 serde_json = "1.0.41"
 twitter-stream = "0.9"
-crossbeam-channel = "0.3"
 itertools = "0.8.1"
 futures-preview = { version = "0.3.0-alpha.19", features = ["compat"] }
-async-std = "0.99"
+async-std = { version = "0.99", features = ["unstable"] }
+sentiment = "0.1.1"
+second-stack = "0.2.1"
+chrono = "0.4.9"
+circular-queue = "0.2.2"
