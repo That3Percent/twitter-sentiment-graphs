@@ -39,7 +39,7 @@ async fn get_sentiment_from_tweet(raw: String, out: Sender<Sentiment>, keywords:
             score: sentiment.score,
             keyword: matching_keyword,
         };
-        out.unbounded_send(result);
+        out.unbounded_send(result).unwrap();
     }
 }
 

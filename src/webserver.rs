@@ -1,5 +1,4 @@
 use crate::aggregator::Aggregator;
-use arc_swap::ArcSwap;
 use rocket::response::NamedFile;
 use rocket::{self, get, routes, State};
 use rocket_contrib::json::Json;

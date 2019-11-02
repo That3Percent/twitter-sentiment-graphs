@@ -1,13 +1,12 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-use arc_swap::ArcSwap;
 use async_std::stream::interval;
 use core::time::Duration;
 use futures::stream::select;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-const UpdateIntervalSeconds: u64 = 120;
+const UPDATE_INTERVAL_SECONDS: u64 = 120;
 
 mod config;
 use crate::config::{read_config, Config};
@@ -62,7 +61,7 @@ async fn async_main() -> Result<()> {
     launch(shared.clone());
 
     let mut events = select(
-        interval(Duration::from_secs(UpdateIntervalSeconds)).map(|_| UpdateOrSentiment::Update),
+        interval(Duration::from_secs(UPDATE_INTERVAL_SECONDS)).map(|_| UpdateOrSentiment::Update),
         sentiments.map(UpdateOrSentiment::Sentiment),
     );
 
