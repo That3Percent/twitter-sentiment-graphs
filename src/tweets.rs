@@ -18,9 +18,11 @@ pub struct TwitterAuth {
     pub access_secret: String,
 }
 
+/// Connects to Twitter and puts all tweets which match the keyword
 pub fn produce_tweets(auth: TwitterAuth, keywords: Keywords) -> impl Stream<Item = String> {
     let (send, recv) = unbounded();
 
+    // TODO: If this were production code, we would need to handle reconnection and errors
     std::thread::spawn(move || {
         use twitter_stream::rt::{self, Future, Stream};
         use twitter_stream::{Token, TwitterStreamBuilder};
@@ -34,6 +36,7 @@ pub fn produce_tweets(auth: TwitterAuth, keywords: Keywords) -> impl Stream<Item
 
         let token = Token::new(consumer_key, consumer_secret, access_key, access_secret);
 
+        // The twitter API says use "," for OR " " for AND
         let track = itertools::join(keywords, ",");
         let fut = TwitterStreamBuilder::filter(token)
             .track(Some(track.as_str()))
@@ -41,12 +44,12 @@ pub fn produce_tweets(auth: TwitterAuth, keywords: Keywords) -> impl Stream<Item
             .unwrap()
             .flatten_stream()
             .for_each(move |json| {
-                send.unbounded_send(json.to_string()).unwrap(); // TODO: Error handling
+                send.unbounded_send(json.to_string()).unwrap();
                 Ok(())
             })
             .map_err(|e| {
                 dbg!(e);
-            }); // TODO: Handle reconnection
+            });
 
         rt::run(fut);
     });
@@ -56,7 +59,8 @@ pub fn produce_tweets(auth: TwitterAuth, keywords: Keywords) -> impl Stream<Item
 
 // TODO: We wanted the much more straightforward version like so...
 // However, Old/New tokio didn't play well and the stream just times out immediately.
-// The current solution does have the advantage of
+// The current solution does have the advantage of putting things into a buffered channel
+// which is desirable anyway.
 /*
 
 pub fn produce_tweets() -> impl futures::Stream<Item=Result<String, Error>> {

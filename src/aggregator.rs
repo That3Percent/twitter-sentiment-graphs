@@ -6,6 +6,7 @@ use std::collections::HashMap;
 
 const SAMPLES: usize = 65;
 
+/// Collects averages of sentiment for a collection of keywords over time.
 #[derive(Debug, Clone)]
 pub struct Aggregator {
     pub items: HashMap<&'static str, AggregatorItem>,
@@ -34,8 +35,7 @@ impl Aggregator {
         let now = Utc::now();
         self.sample_times.push(now);
         for item in self.items.values_mut() {
-            item.samples.push(item.current());
-            item.reset_current();
+            item.move_current_to_history();
         }
     }
 }
@@ -56,6 +56,8 @@ impl AggregatorItem {
         }
     }
 
+    /// The average sentiment for tweets in the latest sample which
+    /// has not yet been moved to history.
     fn current(&self) -> f32 {
         if self.current_count == 0 {
             // Considering no sentiment as neutral sentiment. No sentiment could be represented differently,
@@ -66,7 +68,9 @@ impl AggregatorItem {
         }
     }
 
-    fn reset_current(&mut self) {
+    /// Moves the current sentiment into the samples history
+    fn move_current_to_history(&mut self) {
+        self.samples.push(self.current());
         self.current_total_sentiment = 0.;
         self.current_count = 0;
     }

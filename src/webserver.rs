@@ -53,6 +53,8 @@ struct Data {
     keywords: Vec<Keyword>,
 }
 
+/// Starts the webserver in it's own long running thread.
+/// It manages tasks independently of the analysis.
 pub fn launch(data: Arc<RwLock<Arc<Aggregator>>>) {
     std::thread::spawn(move || {
         rocket::ignite()

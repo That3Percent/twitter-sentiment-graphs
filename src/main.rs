@@ -66,18 +66,16 @@ async fn async_main() -> Result<()> {
     // to be the one owner of the aggregation
     let mut events = select(
         select(
-            interval(Duration::from_secs(UPDATE_INTERVAL_SECONDS))
-                .map(|_| UpdateOrSentiment::Update),
-            interval(Duration::from_secs(SAMPLE_INTERVAL_SECONDS))
-                .map(|_| UpdateOrSentiment::Sample),
+            interval(Duration::from_secs(UPDATE_INTERVAL_SECONDS)).map(|_| Event::Update),
+            interval(Duration::from_secs(SAMPLE_INTERVAL_SECONDS)).map(|_| Event::Sample),
         ),
-        sentiments.map(UpdateOrSentiment::Sentiment),
+        sentiments.map(Event::Sentiment),
     );
 
     loop {
         match events.next().await {
             None => break,
-            Some(UpdateOrSentiment::Update) => {
+            Some(Event::Update) => {
                 let mut clone = aggregator.clone();
                 // Unnofficial, live updating sample. This gives significantly better live updating
                 // while still allowing the general sample time to be larger to de-noise the graph
@@ -88,10 +86,10 @@ async fn async_main() -> Result<()> {
                 let mut w = shared.write().unwrap();
                 *w = clone;
             }
-            Some(UpdateOrSentiment::Sentiment(sentiment)) => {
+            Some(Event::Sentiment(sentiment)) => {
                 aggregator.add(sentiment);
             }
-            Some(UpdateOrSentiment::Sample) => {
+            Some(Event::Sample) => {
                 aggregator.sample();
             }
         };
@@ -100,7 +98,7 @@ async fn async_main() -> Result<()> {
     Ok(())
 }
 
-enum UpdateOrSentiment {
+enum Event {
     Update,
     Sample,
     Sentiment(Sentiment),

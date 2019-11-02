@@ -11,7 +11,10 @@ pub struct Sentiment {
 }
 
 fn find_matching_keywords(keywords: Keywords, text: &str) -> StackAlloc<bool> {
-    // TODO: This can be simplified if I add either reserve() or filter() to second-stack
+    // TODO: This can be simplified if I add either reserve() or filter() to second-stack.
+    // Reserve eg: would allow reserving a StackAlloc<&'static str> of length keywords, then
+    // collecting tokenized words into a StackAlloc<Unicase<&'str>>. Then simply doing
+    // filter on the keywords checking for containment in the now fast to iterate tokenized words
     let mut matching_keywords = acquire(std::iter::repeat(false).take(keywords.len()));
 
     let words = text.split(|c: char| !c.is_alphabetic());
@@ -53,6 +56,7 @@ async fn get_sentiment_from_tweet(raw: String, out: Sender<Sentiment>, keywords:
 
     let sentiment = analyze(text);
 
+    // Publish the analyzed sentiment for each matching keyword as a separate event.
     for (index, is_match) in matching_keywords.iter().enumerate() {
         if !is_match {
             continue;
@@ -97,8 +101,6 @@ mod tests {
 
     #[test]
     fn does_not_match_sub_words() {
-        // This fails because of a problem with a dependency.
-        // I filed an issue here: https://github.com/seanmonstar/unicase/issues/38
         let text = "Everyone loves pizza";
         let keywords = &["love"];
         let matches = find_matching_keywords(keywords, text);
@@ -115,7 +117,15 @@ mod tests {
 
     #[test]
     fn match_is_case_insensitive() {
-        let text = "I!LOVE!PIZZA!";
+        let text = "I LOVE PIZZA!";
+        let keywords = &["pizza"];
+        let matches = find_matching_keywords(keywords, text);
+        assert_eq!(matches[0], true);
+    }
+
+    #[test]
+    fn any_separation_character() {
+        let text = "Do you also ?love.#pizza★&!";
         let keywords = &["pizza"];
         let matches = find_matching_keywords(keywords, text);
         assert_eq!(matches[0], true);
