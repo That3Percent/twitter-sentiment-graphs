@@ -6,7 +6,7 @@ use futures::stream::select;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-const UPDATE_INTERVAL_SECONDS: u64 = 120;
+const UPDATE_INTERVAL_SECONDS: u64 = 4;
 
 mod config;
 use crate::config::{read_config, Config};
@@ -26,11 +26,6 @@ use aggregator::Aggregator;
 mod webserver;
 use webserver::launch;
 
-enum UpdateOrSentiment {
-    Update,
-    Sentiment(Sentiment),
-}
-
 // We know that there are a small and finite set of keywords. Leaking them
 // allows us to copy the references around rather than using
 // Arc<String> or similar for better performance
@@ -43,8 +38,12 @@ fn leak_keywords(mut keywords: Vec<String>) -> Keywords {
 }
 
 async fn async_main() -> Result<()> {
+    // Config
     let Config { keywords, auth } = read_config().await?;
     let keywords = leak_keywords(keywords);
+
+    // Get a channel of keyword matches with the sentiment calculated for the tweet.
+    // Utilizes multiple long running subtasks.
     let raw_tweets = produce_tweets(auth, keywords);
     let (sentiments_send, sentiments) = unbounded();
     task::spawn(get_sentiments_from_tweets(
@@ -53,11 +52,13 @@ async fn async_main() -> Result<()> {
         keywords,
     ));
 
+    // Our results will be piped into here.
     let mut aggregator = Aggregator::new(keywords);
-    aggregator.sample(); // Ensure we don't need to handle empty lists on the browser side.
+    aggregator.sample(); // Hack to ensure we don't need to handle empty lists on the browser side.
 
     let shared = Arc::new(RwLock::new(Arc::new(aggregator.clone())));
 
+    // Now that we have data, even if it's empty, we can start the webserver.
     launch(shared.clone());
 
     let mut events = select(
@@ -81,6 +82,11 @@ async fn async_main() -> Result<()> {
     }
 
     Ok(())
+}
+
+enum UpdateOrSentiment {
+    Update,
+    Sentiment(Sentiment),
 }
 
 fn main() -> Result<()> {

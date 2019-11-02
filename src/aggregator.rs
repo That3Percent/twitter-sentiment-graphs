@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use circular_queue::CircularQueue;
 use std::collections::HashMap;
 
-const SAMPLES: usize = 100;
+const SAMPLES: usize = 65;
 
 #[derive(Debug, Clone)]
 pub struct Aggregator {

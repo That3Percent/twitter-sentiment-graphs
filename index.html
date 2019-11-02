@@ -7,56 +7,85 @@
 
 <script>
 
-// set the dimensions and margins of the graph
-var margin = {top: 10, right: 30, bottom: 30, left: 60},
-	width = screen.width - margin.left - margin.right,
-	height = screen.height - margin.top - margin.bottom;
 
-// append the svg object to the body of the page
-var svg = d3.select("#my_dataviz")
-	.append("svg")
-	.attr("width", width + margin.left + margin.right)
-	.attr("height", height + margin.top + margin.bottom)
-	.append("g")
-	.attr("transform",
-			"translate(" + margin.left + "," + margin.top + ")");
+function update() {
+	//Read the data
+	d3.json("data",
 
-//Read the data
-d3.json("data",
+		function(data) {
 
-	function(data) {
-		var colors = d3.scaleLinear().domain([1,data.keywords.length])
-      		.interpolate(d3.interpolateHcl)
-      		.range([d3.rgb("#007AFF"), d3.rgb('#FFF500')]);
+			// set the dimensions and margins of the graph
+			var margin = {top: 10, right: 30, bottom: 30, left: 60},
+			width = screen.width - margin.left - margin.right,
+			height = screen.height - margin.top - margin.bottom;
 
-		var x = d3.scaleTime()
-			.domain(d3.extent(data.times))
-			.range([ 0, width ]);
-		svg.append("g")
-			.attr("transform", "translate(0," + height + ")")
-			.call(d3.axisBottom(x));
+			// append the svg object to the body of the page
+			var vis = d3.select("#my_dataviz");
+			vis.selectAll("svg").remove();
+			var svg = vis
+				.append("svg")
+				.attr("width", width + margin.left + margin.right)
+				.attr("height", height + margin.top + margin.bottom)
+				.append("g")
+				.attr("transform",
+						"translate(" + margin.left + "," + margin.top + ")");
 
-		var y = d3.scaleLinear()
-			.domain([
-				d3.min(data.keywords, function(d) { return d3.min(d.scores); }),
-				d3.max(data.keywords, function(d) { return d3.max(d.scores); })])
-			.range([ height, 0 ]);
-		svg.append("g")
-			.call(d3.axisLeft(y));
+				var colors = d3.scaleLinear().domain([1,data.keywords.length])
+					.interpolate(d3.interpolateHcl)
+					.range([d3.rgb("#007AFF"), d3.rgb('#FFF500')]);
 
-		for ([i, keyword] of data.keywords.entries()) {
-			// Add the line
-			svg.append("path")
-				.datum(keyword.scores)
-				.attr("fill", "none")
-				.attr("stroke", colors(i))
-				.attr("stroke-width", 1.5)
-				.attr("d", d3.line()
-				.x(function(d, i) { return x(data.times[i]) })
-				.y(function(d) { return y(d) })
-				)
-		}
+				var x = d3.scaleTime()
+					.domain(d3.extent(data.times))
+					.range([ 0, width ]);
+				svg.append("g")
+					.attr("transform", "translate(0," + height + ")")
+					.call(d3.axisBottom(x));
 
-})
+				var y = d3.scaleLinear()
+					.domain([
+						d3.min(data.keywords, function(d) { return d3.min(d.scores); }),
+						d3.max(data.keywords, function(d) { return d3.max(d.scores); })])
+					.range([ height, 0 ]);
+				svg.append("g")
+					.call(d3.axisLeft(y));
 
+				for ([i, keyword] of data.keywords.entries()) {
+					// Add the line
+					svg.append("path")
+						.datum(keyword.scores)
+						.attr("fill", "none")
+						.attr("stroke", colors(i))
+						.attr("stroke-width", 1.5)
+						.attr("d", d3.line()
+						.x(function(d, i) { return x(data.times[i]) })
+						.y(function(d) { return y(d) })
+						)
+				}
+
+				// Add one dot in the legend for each name.
+				svg.selectAll("dots")
+					.data(data.keywords)
+					.enter()
+					.append("circle")
+						.attr("cx", width - 100)
+						.attr("cy", function(d,i){ return 35 + i*25}) // 35 is where the first dot appears. 25 is the distance between dots
+						.attr("r", 7)
+						.style("fill", function(d, i){ return colors(i) });
+
+				svg.selectAll("labels")
+					.data(data.keywords)
+					.enter()
+					.append("text")
+						.attr("x", width - 80)
+						.attr("y", function(d,i){ return 35 + i*25}) // 35 is where the first dot appears. 25 is the distance between dots
+						.style("fill", function(d,i){ return colors(i)})
+						.text(function(d){ return d.name})
+						.attr("text-anchor", "left")
+						.style("alignment-baseline", "middle");
+
+			// FIXME: This will eventually have a request fail and it will stop updating.
+			setTimeout(update, 4000);
+	})
+}
+update();
 </script>
