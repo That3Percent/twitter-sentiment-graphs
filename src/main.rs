@@ -6,7 +6,8 @@ use futures::stream::select;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-const UPDATE_INTERVAL_SECONDS: u64 = 4;
+const UPDATE_INTERVAL_SECONDS: u64 = 1;
+const SAMPLE_INTERVAL_SECONDS: u64 = 60;
 
 mod config;
 use crate::config::{read_config, Config};
@@ -61,8 +62,15 @@ async fn async_main() -> Result<()> {
     // Now that we have data, even if it's empty, we can start the webserver.
     launch(shared.clone());
 
+    // Merge the stream of processed sentiment and update tick, allowing this function
+    // to be the one owner of the aggregation
     let mut events = select(
-        interval(Duration::from_secs(UPDATE_INTERVAL_SECONDS)).map(|_| UpdateOrSentiment::Update),
+        select(
+            interval(Duration::from_secs(UPDATE_INTERVAL_SECONDS))
+                .map(|_| UpdateOrSentiment::Update),
+            interval(Duration::from_secs(SAMPLE_INTERVAL_SECONDS))
+                .map(|_| UpdateOrSentiment::Sample),
+        ),
         sentiments.map(UpdateOrSentiment::Sentiment),
     );
 
@@ -70,13 +78,21 @@ async fn async_main() -> Result<()> {
         match events.next().await {
             None => break,
             Some(UpdateOrSentiment::Update) => {
-                aggregator.sample();
-                let clone = Arc::new(aggregator.clone());
+                let mut clone = aggregator.clone();
+                // Unnofficial, live updating sample. This gives significantly better live updating
+                // while still allowing the general sample time to be larger to de-noise the graph
+                // overall.
+                clone.sample();
+                let clone = Arc::new(clone);
+
                 let mut w = shared.write().unwrap();
                 *w = clone;
             }
             Some(UpdateOrSentiment::Sentiment(sentiment)) => {
                 aggregator.add(sentiment);
+            }
+            Some(UpdateOrSentiment::Sample) => {
+                aggregator.sample();
             }
         };
     }
@@ -86,6 +102,7 @@ async fn async_main() -> Result<()> {
 
 enum UpdateOrSentiment {
     Update,
+    Sample,
     Sentiment(Sentiment),
 }
 

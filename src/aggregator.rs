@@ -34,17 +34,8 @@ impl Aggregator {
         let now = Utc::now();
         self.sample_times.push(now);
         for item in self.items.values_mut() {
-            let average = if item.current_count == 0 {
-                // Considering no sentiment as neutral sentiment. No sentiment could be represented differently,
-                // but choosing not to for simplicity.
-                0.
-            } else {
-                let average = item.current_total_sentiment / (item.current_count as f32);
-                item.current_total_sentiment = 0.;
-                item.current_count = 0;
-                average
-            };
-            item.samples.push(average);
+            item.samples.push(item.current());
+            item.reset_current();
         }
     }
 }
@@ -63,5 +54,20 @@ impl AggregatorItem {
             current_total_sentiment: 0.,
             samples: CircularQueue::with_capacity(SAMPLES),
         }
+    }
+
+    fn current(&self) -> f32 {
+        if self.current_count == 0 {
+            // Considering no sentiment as neutral sentiment. No sentiment could be represented differently,
+            // but choosing not to for simplicity.
+            0.
+        } else {
+            self.current_total_sentiment / (self.current_count as f32)
+        }
+    }
+
+    fn reset_current(&mut self) {
+        self.current_total_sentiment = 0.;
+        self.current_count = 0;
     }
 }
