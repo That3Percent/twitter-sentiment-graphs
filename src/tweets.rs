@@ -1,54 +1,57 @@
-use serde::{Deserialize};
 use crate::prelude::*;
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct Tweet {
-	pub text: Option<String>,
+    pub text: Option<String>,
 }
 
 #[derive(Deserialize)]
 pub struct TwitterAuth {
-	#[serde(rename="consumerKey")]
-	pub consumer_key: String,
-	#[serde(rename="consumerSecret")]
-	pub consumer_secret: String,
-	#[serde(rename="accessKey")]
-	pub access_key: String,
-	#[serde(rename="accessSecret")]
-	pub access_secret: String,
+    #[serde(rename = "consumerKey")]
+    pub consumer_key: String,
+    #[serde(rename = "consumerSecret")]
+    pub consumer_secret: String,
+    #[serde(rename = "accessKey")]
+    pub access_key: String,
+    #[serde(rename = "accessSecret")]
+    pub access_secret: String,
 }
 
-pub fn produce_tweets(auth: TwitterAuth, keywords: Keywords) -> impl Stream<Item=String> {
-	let (send, recv) = unbounded();
+pub fn produce_tweets(auth: TwitterAuth, keywords: Keywords) -> impl Stream<Item = String> {
+    let (send, recv) = unbounded();
 
-	std::thread::spawn(move || {
-		use twitter_stream::{Token, TwitterStreamBuilder};
-		use twitter_stream::rt::{self, Future, Stream};
+    std::thread::spawn(move || {
+        use twitter_stream::rt::{self, Future, Stream};
+        use twitter_stream::{Token, TwitterStreamBuilder};
 
-		let TwitterAuth {
-			consumer_key,
-			consumer_secret,
-			access_key,
-			access_secret
-		} = auth;
+        let TwitterAuth {
+            consumer_key,
+            consumer_secret,
+            access_key,
+            access_secret,
+        } = auth;
 
-		let token = Token::new(consumer_key, consumer_secret, access_key, access_secret);
+        let token = Token::new(consumer_key, consumer_secret, access_key, access_secret);
 
-		let track = itertools::join(keywords, ",");
-		let fut = TwitterStreamBuilder::filter(token)
-			.track(Some(track.as_str()))
-			.listen()
-			.unwrap()
-			.flatten_stream()
-			.for_each(move |json| {
-				send.unbounded_send(json.to_string()).unwrap(); // TODO: Error handling
-				Ok(())
-			}).map_err(|e| {dbg!(e);}); // TODO: Handle reconnection
+        let track = itertools::join(keywords, ",");
+        let fut = TwitterStreamBuilder::filter(token)
+            .track(Some(track.as_str()))
+            .listen()
+            .unwrap()
+            .flatten_stream()
+            .for_each(move |json| {
+                send.unbounded_send(json.to_string()).unwrap(); // TODO: Error handling
+                Ok(())
+            })
+            .map_err(|e| {
+                dbg!(e);
+            }); // TODO: Handle reconnection
 
-		rt::run(fut);
-	});
+        rt::run(fut);
+    });
 
-	recv
+    recv
 }
 
 // TODO: We wanted the much more straightforward version like so...
@@ -57,22 +60,22 @@ pub fn produce_tweets(auth: TwitterAuth, keywords: Keywords) -> impl Stream<Item
 /*
 
 pub fn produce_tweets() -> impl futures::Stream<Item=Result<String, Error>> {
-	use crossbeam_channel::Sender;
-	use twitter_stream::{Token, TwitterStreamBuilder, Error};
-	use twitter_stream::rt::{Future, Stream};
-	use futures::compat::Stream01CompatExt;
+    use crossbeam_channel::Sender;
+    use twitter_stream::{Token, TwitterStreamBuilder, Error};
+    use twitter_stream::rt::{Future, Stream};
+    use futures::compat::Stream01CompatExt;
 
 
     let token = Token::new(ConsumerKey, ConsumerSecret, AccessKey, AccessSecret);
 
-	let track = itertools::join(Keywords, "&");
+    let track = itertools::join(Keywords, "&");
 
     TwitterStreamBuilder::filter(token)
         .track(Some(track.as_str()))
         .listen()
-	.unwrap()
+    .unwrap()
         .flatten_stream()
-		.map(|e| e.to_string() )
-		.compat()
+        .map(|e| e.to_string() )
+        .compat()
 }
 */
